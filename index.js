@@ -1,5 +1,6 @@
 const fs = require("fs");
 const http = require("http");
+const url = require("url");
 
 // Synchronous File reading/writing
 // const txtIn = fs.readFileSync("./txt/input.txt", "utf-8");
@@ -34,6 +35,7 @@ function replaceTemplate(template, product) {
   output = output.replace(/{%ID%}/g, product.id);
   output = output.replace(/{%FROM%}/g, product.from);
   output = output.replace(/{%NUTRIENTS%}/g, product.nutrients);
+  output = output.replace(/{%DESCRIPTION%}/g, product.description);
 
   if (!product.organic) {
     output = output.replace(/{%NOT_ORGANIC%}/g, "not-organic");
@@ -58,9 +60,9 @@ const data = fs.readFileSync(`${__dirname}/dev-data/data.json`, "utf-8");
 const dataObj = JSON.parse(data);
 
 const server = http.createServer((req, res) => {
-  const pathName = req.url;
+  const { query, pathname } = url.parse(req.url, true);
 
-  if (pathName === "/" || pathName === "/overview") {
+  if (pathname === "/" || pathname === "/overview") {
     res.writeHead(200, {
       "content-type": "text/html",
     });
@@ -69,12 +71,15 @@ const server = http.createServer((req, res) => {
     let overviewPage = tempOverview.replace("{%PRODUCT_CARDS%}", cardsHtml);
 
     res.end(overviewPage);
-  } else if (pathName === "/product") {
+  } else if (pathname === "/product") {
+    const product = dataObj.find((el) => el.id === Number(query.id));
+
     res.writeHead(200, {
       "content-type": "text/html",
     });
-    res.end(tempProduct);
-  } else if (pathName === "/api") {
+    let productHtml = replaceTemplate(tempProduct, product);
+    res.end(productHtml);
+  } else if (pathname === "/api") {
     res.writeHead(200, {
       "content-type": "application/json",
     });
